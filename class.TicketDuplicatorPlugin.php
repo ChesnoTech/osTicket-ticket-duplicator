@@ -43,6 +43,7 @@ class TicketDuplicatorPlugin extends Plugin {
             url('^/ticket-duplicator/', patterns(
                 $dir . 'class.TicketDuplicatorAjax.php:TicketDuplicatorAjax',
                 url_post('^duplicate$', 'duplicate'),
+                url_post('^log-source-note$', 'logSourceNote'),
                 url_get('^assets/js$', 'serveJs'),
                 url_get('^assets/css$', 'serveCss')
             ))

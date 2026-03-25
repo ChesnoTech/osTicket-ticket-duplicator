@@ -164,19 +164,24 @@ class TicketDuplicatorAjax extends AjaxController {
             return;
         }
 
-        // Log one summary note on the ORIGINAL ticket
         $firstNum = $created[0]['number'];
         $lastNum = $created[count($created) - 1]['number'];
-        if (count($created) == 1) {
-            $noteBody = sprintf(
-                'Ticket <a href="tickets.php?id=%d"><b>#%s</b></a> was created as a duplicate of this ticket.',
-                $created[0]['id'], $firstNum);
-        } else {
-            $noteBody = sprintf(
-                '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
-                count($created), $firstNum, $lastNum);
+
+        // Log a summary note on the ORIGINAL ticket unless caller
+        // opted out (sequential mode logs one summary at the end).
+        $skipSourceNote = !empty($_POST['skip_source_note']);
+        if (!$skipSourceNote) {
+            if (count($created) == 1) {
+                $noteBody = sprintf(
+                    'Ticket <a href="tickets.php?id=%d"><b>#%s</b></a> was created as a duplicate of this ticket.',
+                    $created[0]['id'], $firstNum);
+            } else {
+                $noteBody = sprintf(
+                    '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
+                    count($created), $firstNum, $lastNum);
+            }
+            $ticket->logNote('Ticket Duplicated', $noteBody, $thisstaff, false);
         }
-        $ticket->logNote('Ticket Duplicated', $noteBody, $thisstaff, false);
 
         Http::response(200, JsonDataEncoder::encode(array(
             'success'      => true,
@@ -185,6 +190,38 @@ class TicketDuplicatorAjax extends AjaxController {
             'first_number' => $firstNum,
             'last_number'  => $lastNum,
         )));
+    }
+
+    function logSourceNote() {
+        global $thisstaff;
+        $this->requireStaff();
+
+        $ticketId = (int) $_POST['ticket_id'];
+        $count    = (int) $_POST['count'];
+        $firstNum = $_POST['first_number'] ?: '';
+        $lastNum  = $_POST['last_number'] ?: '';
+
+        $ticket = Ticket::lookup($ticketId);
+        if (!$ticket) {
+            Http::response(404, JsonDataEncoder::encode(
+                array('error' => 'Ticket not found')));
+            return;
+        }
+
+        if ($count == 1) {
+            $noteBody = sprintf(
+                'Ticket <b>#%s</b> was created as a duplicate of this ticket.',
+                Format::htmlchars($firstNum));
+        } else {
+            $noteBody = sprintf(
+                '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
+                $count,
+                Format::htmlchars($firstNum),
+                Format::htmlchars($lastNum));
+        }
+        $ticket->logNote('Ticket Duplicated', $noteBody, $thisstaff, false);
+
+        Http::response(200, JsonDataEncoder::encode(array('success' => true)));
     }
 
     private function serveFile($file, $contentType, $maxAge = 86400) {

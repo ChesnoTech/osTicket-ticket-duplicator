@@ -28,7 +28,6 @@
         if (!TD.isTicketViewPage())
             return;
 
-        // Don't add if already present (PJAX re-navigation)
         if ($('#td-duplicate-btn').length)
             return;
 
@@ -49,12 +48,10 @@
                 TD.showQuantityPrompt(ticketId);
             });
 
-        // Insert after the Print button span
         var $printBtn = $('.sticky.bar .content .pull-right.flush-right span.action-button:has(#ticket-print)');
         if ($printBtn.length) {
             $btn.insertAfter($printBtn);
         } else {
-            // Fallback: prepend to the button bar
             $('.sticky.bar .content .pull-right.flush-right').prepend($btn);
         }
     };
@@ -67,7 +64,7 @@
             '2'
         );
 
-        if (input === null) return; // cancelled
+        if (input === null) return;
 
         var total = parseInt(input, 10);
         if (isNaN(total) || total < 2) {
@@ -75,7 +72,7 @@
             return;
         }
 
-        var count = total - 1; // exclude the original
+        var count = total - 1;
         if (count > 200) {
             alert('Maximum 200 duplicates at a time.');
             return;
@@ -84,59 +81,113 @@
         if (!confirm('Create ' + count + ' duplicate ticket' + (count > 1 ? 's' : '') + '?'))
             return;
 
-        TD.duplicateTicket(ticketId, count);
+        TD.duplicateSequential(ticketId, count);
     };
 
-    TD.duplicateTicket = function(ticketId, count) {
+    TD.duplicateSequential = function(ticketId, total) {
         var $btn = $('#td-duplicate-btn');
         var originalHtml = $btn.html();
-        $btn.html('<i class="icon-spinner icon-spin"></i> <span id="td-progress">0/' + count + '</span>')
+        var created = 0;
+        var firstId = null;
+        var firstNumber = null;
+        var lastNumber = null;
+
+        // Show initial progress
+        $btn.html('<i class="icon-spinner icon-spin"></i> <span id="td-progress">0/' + total + '</span>')
             .css('pointer-events', 'none');
 
-        $.ajax({
-            url: 'ajax.php/ticket-duplicator/duplicate',
-            type: 'POST',
-            data: { ticket_id: ticketId, count: count },
-            dataType: 'json',
-            success: function(data) {
-                if (data.success) {
-                    var created = data.created || 0;
+        function createNext() {
+            $.ajax({
+                url: 'ajax.php/ticket-duplicator/duplicate',
+                type: 'POST',
+                data: { ticket_id: ticketId, count: 1, skip_source_note: 1 },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.success) {
+                        created++;
+                        if (!firstId) {
+                            firstId = data.first_id;
+                            firstNumber = data.first_number;
+                        }
+                        lastNumber = data.last_number;
+
+                        // Update progress
+                        $('#td-progress').text(created + '/' + total);
+
+                        if (created < total) {
+                            createNext();
+                        } else {
+                            onComplete();
+                        }
+                    } else {
+                        onError(data.error || 'Unknown error');
+                    }
+                },
+                error: function(xhr) {
+                    var msg = 'Failed to duplicate ticket.';
+                    try {
+                        var r = JSON.parse(xhr.responseText);
+                        if (r.error) msg = r.error;
+                    } catch(e) {}
+                    onError(msg);
+                }
+            });
+        }
+
+        function onComplete() {
+            // Log one summary note on the original ticket
+            $.ajax({
+                url: 'ajax.php/ticket-duplicator/log-source-note',
+                type: 'POST',
+                data: {
+                    ticket_id: ticketId,
+                    count: created,
+                    first_number: firstNumber,
+                    last_number: lastNumber
+                },
+                dataType: 'json',
+                complete: function() {
+                    // Restore button
+                    $btn.html(originalHtml).css('pointer-events', '');
+                    $btn.on('click', function(e) {
+                        e.preventDefault();
+                        TD.showQuantityPrompt(ticketId);
+                    });
+
+                    // Show success notice
                     var $notice = $('#msg_notice');
                     if ($notice.length) {
                         $notice.find('#msg-txt').text(
                             created + ' duplicate ticket' + (created > 1 ? 's' : '') +
-                            ' created successfully! (#' + data.first_number + ' — #' + data.last_number + ')');
-                        $notice.show().delay(8000).fadeOut();
+                            ' created! (#' + firstNumber + ' — #' + lastNumber + ')');
+                        $notice.show().delay(10000).fadeOut();
                     }
-                    // Open first new ticket in a new tab
-                    if (data.first_id) {
-                        window.open('tickets.php?id=' + data.first_id, '_blank');
+
+                    // Reload the page to show the duplication notes
+                    if (typeof $.pjax !== 'undefined') {
+                        $.pjax.reload('#pjax-container');
                     }
-                } else {
-                    alert('Failed to duplicate ticket: ' + (data.error || 'Unknown error'));
                 }
-                // Restore button
-                $btn.html(originalHtml).css('pointer-events', '');
-                $btn.on('click', function(e) {
-                    e.preventDefault();
-                    TD.showQuantityPrompt(ticketId);
-                });
-            },
-            error: function(xhr) {
-                var msg = 'Failed to duplicate ticket.';
-                try {
-                    var r = JSON.parse(xhr.responseText);
-                    if (r.error) msg = r.error;
-                } catch(e) {}
+            });
+        }
+
+        function onError(msg) {
+            // Restore button
+            $btn.html(originalHtml).css('pointer-events', '');
+            $btn.on('click', function(e) {
+                e.preventDefault();
+                TD.showQuantityPrompt(ticketId);
+            });
+
+            if (created > 0) {
+                alert(msg + '\n\nSuccessfully created ' + created + ' of ' + total + ' tickets before the error.');
+            } else {
                 alert(msg);
-                // Restore button
-                $btn.html(originalHtml).css('pointer-events', '');
-                $btn.on('click', function(e) {
-                    e.preventDefault();
-                    TD.showQuantityPrompt(ticketId);
-                });
             }
-        });
+        }
+
+        // Start the chain
+        createNext();
     };
 
     // Initialize on document ready and on PJAX completion
