@@ -1,0 +1,15 @@
+#td-duplicate-btn {
+    margin-right: 5px;
+}
+
+#td-duplicate-btn:hover {
+    background-color: #e8e8e8;
+}
+
+#td-duplicate-btn i.icon-copy {
+    color: #555;
+}
+
+#td-duplicate-btn i.icon-spinner {
+    color: #999;
+}
