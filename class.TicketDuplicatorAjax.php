@@ -14,7 +14,7 @@ class TicketDuplicatorAjax extends AjaxController {
     private function requireStaff() {
         global $thisstaff;
 
-        if (!$thisstaff || !$thisstaff->isValid()) {
+        if (!$thisstaff || !$thisstaff->getId()) {
             Http::response(403, JsonDataEncoder::encode(
                 array('error' => 'Staff login required')));
             exit;
