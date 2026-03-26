@@ -42,6 +42,8 @@ class TicketDuplicatorPlugin extends Plugin {
         $dispatcher->append(
             url('^/ticket-duplicator/', patterns(
                 $dir . 'class.TicketDuplicatorAjax.php:TicketDuplicatorAjax',
+                url_get('^check-access$', 'checkAccess'),
+                url_get('^config$', 'getConfig'),
                 url_post('^duplicate$', 'duplicate'),
                 url_post('^log-source-note$', 'logSourceNote'),
                 url_get('^assets/js$', 'serveJs'),

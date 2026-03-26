@@ -40,6 +40,87 @@ class TicketDuplicatorAjax extends AjaxController {
         return $instance->getConfig();
     }
 
+    function checkAccess() {
+        $this->requireStaff();
+
+        $ticketId = (int) $_GET['ticket_id'];
+        if (!$ticketId) {
+            Http::response(200, JsonDataEncoder::encode(array('allowed' => true)));
+            return;
+        }
+
+        $ticket = Ticket::lookup($ticketId);
+        if (!$ticket) {
+            Http::response(200, JsonDataEncoder::encode(array('allowed' => false)));
+            return;
+        }
+
+        $config = $this->getPluginConfig();
+        $allowed = $this->isTicketAllowed($ticket, $config);
+
+        Http::response(200, JsonDataEncoder::encode(array('allowed' => $allowed)));
+    }
+
+    /**
+     * Parse a ChoiceField value into an array of ID strings.
+     * ChoiceField stores as JSON {"5":"Name","12":"Name"} or comma-separated.
+     */
+    private static function parseIdList($value) {
+        if (!$value)
+            return array();
+        if (is_array($value))
+            return array_map('strval', array_keys($value));
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded))
+                return array_map('strval', array_keys($decoded));
+            return array_filter(array_map('trim', explode(',', $value)));
+        }
+        return array();
+    }
+
+    private function isTicketAllowed($ticket, $config) {
+        global $thisstaff;
+
+        if (!$config)
+            return true;
+
+        // Check agent's primary department against allowed departments
+        $allowedDepts = self::parseIdList($config->get('allowed_depts'));
+        if (!empty($allowedDepts)) {
+            $agentDeptId = $thisstaff ? (string) $thisstaff->getDeptId() : '';
+            if (!in_array($agentDeptId, $allowedDepts))
+                return false;
+        }
+
+        // Check ticket's help topic against allowed topics
+        $allowedTopics = self::parseIdList($config->get('allowed_topics'));
+        if (!empty($allowedTopics)) {
+            if (!in_array((string) $ticket->getTopicId(), $allowedTopics))
+                return false;
+        }
+
+        return true;
+    }
+
+    function getConfig() {
+        $this->requireStaff();
+
+        $config = $this->getPluginConfig();
+        $allowedDepts = array();
+        $allowedTopics = array();
+
+        if ($config) {
+            $allowedDepts = self::parseIdList($config->get('allowed_depts'));
+            $allowedTopics = self::parseIdList($config->get('allowed_topics'));
+        }
+
+        Http::response(200, JsonDataEncoder::encode(array(
+            'allowed_depts'  => $allowedDepts,
+            'allowed_topics' => $allowedTopics,
+        )));
+    }
+
     function duplicate() {
         global $thisstaff;
 
@@ -69,6 +150,14 @@ class TicketDuplicatorAjax extends AjaxController {
 
         // Load plugin config (use defaults if no instance configured)
         $config = $this->getPluginConfig();
+
+        // Check dept/topic access
+        if (!$this->isTicketAllowed($ticket, $config)) {
+            Http::response(403, JsonDataEncoder::encode(
+                array('error' => 'Duplication not allowed for this ticket (department/topic restriction)')));
+            return;
+        }
+
         $prefix = $config ? $config->get('subject_prefix') : '[Duplicate] ';
         $copyPriority = $config ? $config->get('copy_priority') : true;
         $copySla = $config ? $config->get('copy_sla') : true;

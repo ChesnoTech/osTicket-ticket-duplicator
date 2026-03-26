@@ -38,12 +38,14 @@ Adds a **Duplicate** button to the staff ticket-view toolbar. Bulk-create identi
 
 **Admin Panel > Manage > Plugins > Ticket Duplicator > Instances > (your instance)**
 
-| Setting         | Default        | Description                                            |
-|-----------------|----------------|--------------------------------------------------------|
-| Subject Prefix  | `[Duplicate] ` | Text prepended to the subject of each duplicate.       |
-| Copy Priority   | Yes            | Copy the priority level from the original ticket.      |
-| Copy SLA        | Yes            | Copy the SLA plan from the original ticket.            |
-| Copy Assignment | No             | Copy the staff/team assignment from the original.      |
+| Setting              | Default        | Description                                            |
+|----------------------|----------------|--------------------------------------------------------|
+| Subject Prefix       | `[Duplicate] ` | Text prepended to the subject of each duplicate.       |
+| Copy Priority        | Yes            | Copy the priority level from the original ticket.      |
+| Copy SLA             | Yes            | Copy the SLA plan from the original ticket.            |
+| Copy Assignment      | No             | Copy the staff/team assignment from the original.      |
+| Allowed Departments  | All            | Only agents in these departments can duplicate.        |
+| Allowed Help Topics  | All            | Only show the button on tickets with these topics.     |
 
 ## Usage
 

@@ -9,7 +9,6 @@
         if (id && /^\d+$/.test(id))
             return parseInt(id, 10);
 
-        // Fallback: parse from edit link
         var editHref = $('a[href*="tickets.php?id="][href*="a=edit"]').attr('href');
         if (editHref) {
             var m = editHref.match(/id=(\d+)/);
@@ -33,6 +32,27 @@
 
         var ticketId = TD.getTicketId();
         if (!ticketId)
+            return;
+
+        // Check if duplication is allowed for this ticket (dept/topic access)
+        $.ajax({
+            url: 'ajax.php/ticket-duplicator/check-access',
+            type: 'GET',
+            data: { ticket_id: ticketId },
+            dataType: 'json',
+            success: function(resp) {
+                if (resp.allowed)
+                    TD.insertButton(ticketId);
+            },
+            error: function() {
+                // If check fails, show button anyway (permissive fallback)
+                TD.insertButton(ticketId);
+            }
+        });
+    };
+
+    TD.insertButton = function(ticketId) {
+        if ($('#td-duplicate-btn').length)
             return;
 
         var $btn = $('<a>')
@@ -92,7 +112,6 @@
         var firstNumber = null;
         var lastNumber = null;
 
-        // Show initial progress
         $btn.html('<i class="icon-spinner icon-spin"></i> <span id="td-progress">0/' + total + '</span>')
             .css('pointer-events', 'none');
 
@@ -110,8 +129,6 @@
                             firstNumber = data.first_number;
                         }
                         lastNumber = data.last_number;
-
-                        // Update progress
                         $('#td-progress').text(created + '/' + total);
 
                         if (created < total) {
@@ -135,7 +152,6 @@
         }
 
         function onComplete() {
-            // Log one summary note on the original ticket
             $.ajax({
                 url: 'ajax.php/ticket-duplicator/log-source-note',
                 type: 'POST',
@@ -147,14 +163,8 @@
                 },
                 dataType: 'json',
                 complete: function() {
-                    // Restore button
-                    $btn.html(originalHtml).css('pointer-events', '');
-                    $btn.on('click', function(e) {
-                        e.preventDefault();
-                        TD.showQuantityPrompt(ticketId);
-                    });
+                    restoreButton();
 
-                    // Show success notice
                     var $notice = $('#msg_notice');
                     if ($notice.length) {
                         $notice.find('#msg-txt').text(
@@ -163,7 +173,6 @@
                         $notice.show().delay(10000).fadeOut();
                     }
 
-                    // Reload the page to show the duplication notes
                     if (typeof $.pjax !== 'undefined') {
                         $.pjax.reload('#pjax-container');
                     }
@@ -172,25 +181,25 @@
         }
 
         function onError(msg) {
-            // Restore button
-            $btn.html(originalHtml).css('pointer-events', '');
-            $btn.on('click', function(e) {
-                e.preventDefault();
-                TD.showQuantityPrompt(ticketId);
-            });
-
+            restoreButton();
             if (created > 0) {
-                alert(msg + '\n\nSuccessfully created ' + created + ' of ' + total + ' tickets before the error.');
+                alert(msg + '\n\nSuccessfully created ' + created + ' of ' + total + ' before the error.');
             } else {
                 alert(msg);
             }
         }
 
-        // Start the chain
+        function restoreButton() {
+            $btn.html(originalHtml).css('pointer-events', '');
+            $btn.on('click', function(e) {
+                e.preventDefault();
+                TD.showQuantityPrompt(ticketId);
+            });
+        }
+
         createNext();
     };
 
-    // Initialize on document ready and on PJAX completion
     $(function() { TD.init(); });
     $(document).on('pjax:end', function() { TD.init(); });
 
