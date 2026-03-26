@@ -112,8 +112,10 @@
         var firstNumber = null;
         var lastNumber = null;
 
-        $btn.html('<i class="icon-spinner icon-spin"></i> <span id="td-progress">0/' + total + '</span>')
-            .css('pointer-events', 'none');
+        $btn.html('<i class="icon-copy" style="opacity:.5"></i>')
+            .attr('title', '0/' + total)
+            .css({'pointer-events': 'none', 'position': 'relative'})
+            .append('<span id="td-progress" style="position:absolute;top:-8px;right:-8px;background:#e74c3c;color:#fff;font-size:10px;padding:1px 4px;border-radius:8px;line-height:14px;font-weight:bold;white-space:nowrap;">0/' + total + '</span>');
 
         function createNext() {
             $.ajax({
@@ -130,6 +132,7 @@
                         }
                         lastNumber = data.last_number;
                         $('#td-progress').text(created + '/' + total);
+                        $btn.attr('title', created + '/' + total);
 
                         if (created < total) {
                             createNext();
