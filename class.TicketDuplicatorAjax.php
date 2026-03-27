@@ -85,7 +85,7 @@ class TicketDuplicatorAjax extends AjaxController {
             if ($id)
                 return (int) $id;
         }
-        return 75; // default
+        return null; // disabled by default
     }
 
     private function isTicketAllowed($ticket, $config) {
@@ -125,8 +125,9 @@ class TicketDuplicatorAjax extends AjaxController {
         }
 
         Http::response(200, JsonDataEncoder::encode(array(
-            'allowed_depts'  => $allowedDepts,
-            'allowed_topics' => $allowedTopics,
+            'allowed_depts'    => $allowedDepts,
+            'allowed_topics'   => $allowedTopics,
+            'assembly_field_id' => $this->getAssemblyFieldId($config),
         )));
     }
 

@@ -34,6 +34,7 @@
         if (!ticketId)
             return;
 
+        // Fetch access + config in parallel
         $.ajax({
             url: 'ajax.php/ticket-duplicator/check-access',
             type: 'GET',
@@ -45,6 +46,14 @@
             },
             error: function() {
                 TD.insertButton(ticketId);
+            }
+        });
+        $.ajax({
+            url: 'ajax.php/ticket-duplicator/config',
+            type: 'GET',
+            dataType: 'json',
+            success: function(resp) {
+                TD.assemblyFieldId = resp.assembly_field_id || null;
             }
         });
     };
@@ -95,12 +104,13 @@
                   '<label>Total copies (incl. original):</label>' +
                   '<input type="number" id="td-total" value="2" min="2" max="201" class="td-input-num">' +
                 '</div>' +
+                (TD.assemblyFieldId ?
                 '<div class="td-field-row">' +
                   '<label class="td-checkbox-label">' +
                     '<input type="checkbox" id="td-manual-assembly"> ' +
                     'Enter 1C Assembly numbers manually' +
                   '</label>' +
-                '</div>' +
+                '</div>' : '') +
                 '<div id="td-assembly-section" style="display:none;">' +
                   '<div class="td-table-wrap">' +
                     '<table class="td-assembly-table">' +
