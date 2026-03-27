@@ -79,6 +79,15 @@ class TicketDuplicatorAjax extends AjaxController {
         return array();
     }
 
+    private function getAssemblyFieldId($config) {
+        if ($config) {
+            $id = $config->get('assembly_field_id');
+            if ($id)
+                return (int) $id;
+        }
+        return 75; // default
+    }
+
     private function isTicketAllowed($ticket, $config) {
         global $thisstaff;
 
@@ -240,6 +249,23 @@ class TicketDuplicatorAjax extends AjaxController {
                 $thisstaff,
                 false
             );
+
+            // Override the 1C Assembly field if a value was provided
+            if (!empty($_POST['assembly_value'])) {
+                $assemblyFieldId = $this->getAssemblyFieldId($config);
+                if ($assemblyFieldId) {
+                    $assemblyValue = trim($_POST['assembly_value']);
+                    foreach (DynamicFormEntry::forTicket($newTicket->getId()) as $form) {
+                        foreach ($form->getAnswers() as $answer) {
+                            if ($answer->getField()->get('id') == $assemblyFieldId) {
+                                $answer->setValue($assemblyValue);
+                                $answer->save();
+                                break 2;
+                            }
+                        }
+                    }
+                }
+            }
 
             $created[] = array(
                 'id'     => $newTicket->getId(),

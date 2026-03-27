@@ -65,6 +65,13 @@ class TicketDuplicatorConfig extends PluginConfig {
                 'default' => false,
             )),
 
+            'assembly_field_id' => new TextboxField(array(
+                'label' => /* trans */ '1C Assembly Field ID',
+                'hint'  => /* trans */ 'Custom field ID for 1C Assembly. Used for manual entry during duplication.',
+                'default' => '75',
+                'configuration' => array('size' => 10, 'length' => 10),
+            )),
+
             'access_heading' => new SectionBreakField(array(
                 'label' => /* trans */ 'Access Control',
                 'hint'  => /* trans */ 'Restrict which tickets show the Duplicate button. Leave empty to allow all.',
