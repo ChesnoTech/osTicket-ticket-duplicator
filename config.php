@@ -36,6 +36,27 @@ class TopicChoiceField extends ChoiceField {
     }
 }
 
+/**
+ * Custom ChoiceField that loads text-type custom fields from ticket forms.
+ */
+class TicketFieldChoiceField extends ChoiceField {
+    function getChoices($verbose=false, $options=array()) {
+        if (!isset($this->_choices)) {
+            $this->_choices = array();
+            $sql = 'SELECT f.id, f.label FROM ' . FORM_FIELD_TABLE . ' f '
+                 . 'JOIN ' . FORM_TABLE . ' fm ON fm.id = f.form_id '
+                 . "WHERE fm.type = 'T' AND f.type = 'text' "
+                 . "AND f.name NOT IN ('subject','message') "
+                 . 'ORDER BY f.sort';
+            $res = db_query($sql);
+            if ($res)
+                while ($row = db_fetch_array($res))
+                    $this->_choices[$row['id']] = $row['label'];
+        }
+        return $this->_choices;
+    }
+}
+
 class TicketDuplicatorConfig extends PluginConfig {
 
     function getOptions() {
@@ -65,11 +86,18 @@ class TicketDuplicatorConfig extends PluginConfig {
                 'default' => false,
             )),
 
-            'assembly_field_id' => new TextboxField(array(
-                'label' => /* trans */ '1C Assembly Field ID',
-                'hint'  => /* trans */ 'Custom field ID for per-ticket manual entry during duplication. Leave empty to disable.',
-                'default' => '',
-                'configuration' => array('size' => 10, 'length' => 10),
+            'manual_heading' => new SectionBreakField(array(
+                'label' => /* trans */ 'Manual Entry Fields',
+                'hint'  => /* trans */ 'Select fields that agents can fill in manually for each duplicate.',
+            )),
+            'manual_fields' => new TicketFieldChoiceField(array(
+                'label' => /* trans */ 'Fields for Manual Entry',
+                'hint'  => /* trans */ 'Selected fields will appear as columns in the duplication form. Leave empty to disable.',
+                'required' => false,
+                'configuration' => array(
+                    'multiselect' => true,
+                    'prompt' => 'None (disabled)',
+                ),
             )),
 
             'access_heading' => new SectionBreakField(array(

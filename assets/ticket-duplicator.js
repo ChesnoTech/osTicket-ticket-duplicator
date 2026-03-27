@@ -2,6 +2,7 @@
     'use strict';
 
     var TD = {};
+    TD.manualFields = []; // [{id:75, label:"1C Assembly"}, ...]
 
     TD.getTicketId = function() {
         var params = new URLSearchParams(window.location.search);
@@ -34,7 +35,6 @@
         if (!ticketId)
             return;
 
-        // Fetch access + config in parallel
         $.ajax({
             url: 'ajax.php/ticket-duplicator/check-access',
             type: 'GET',
@@ -53,7 +53,7 @@
             type: 'GET',
             dataType: 'json',
             success: function(resp) {
-                TD.assemblyFieldId = resp.assembly_field_id || null;
+                TD.manualFields = resp.manual_fields || [];
             }
         });
     };
@@ -86,15 +86,17 @@
     // ── Modal UI ──
 
     TD.showModal = function(ticketId) {
-        // Remove any existing modal
         $('#td-modal-overlay').remove();
 
         var ticketNumber = $('h2 a[href*="tickets.php"]').text().replace('#', '').trim()
             || $('title').text().replace(/.*#/, '').replace(/\s.*/, '').trim();
 
+        var hasManualFields = TD.manualFields.length > 0;
+        var isWide = TD.manualFields.length > 1;
+
         var html =
             '<div id="td-modal-overlay" class="td-overlay">' +
-            '<div class="td-modal">' +
+            '<div class="td-modal' + (isWide ? ' td-modal-wide' : '') + '">' +
               '<div class="td-modal-header">' +
                 '<span>Duplicate Ticket #' + ticketNumber + '</span>' +
                 '<a class="td-modal-close">&times;</a>' +
@@ -104,21 +106,21 @@
                   '<label>Total copies (incl. original):</label>' +
                   '<input type="number" id="td-total" value="2" min="2" max="201" class="td-input-num">' +
                 '</div>' +
-                (TD.assemblyFieldId ?
+                (hasManualFields ?
                 '<div class="td-field-row">' +
                   '<label class="td-checkbox-label">' +
-                    '<input type="checkbox" id="td-manual-assembly"> ' +
-                    'Enter 1C Assembly numbers manually' +
+                    '<input type="checkbox" id="td-manual-check"> ' +
+                    'Enter field values manually' +
                   '</label>' +
-                '</div>' : '') +
-                '<div id="td-assembly-section" style="display:none;">' +
+                '</div>' +
+                '<div id="td-manual-section" style="display:none;">' +
                   '<div class="td-table-wrap">' +
-                    '<table class="td-assembly-table">' +
-                      '<thead><tr><th>#</th><th>1C Assembly Number</th></tr></thead>' +
-                      '<tbody id="td-assembly-rows"></tbody>' +
+                    '<table class="td-manual-table">' +
+                      '<thead><tr><th>#</th>' + TD.buildTableHeaders() + '</tr></thead>' +
+                      '<tbody id="td-manual-rows"></tbody>' +
                     '</table>' +
                   '</div>' +
-                '</div>' +
+                '</div>' : '') +
               '</div>' +
               '<div class="td-modal-footer">' +
                 '<button type="button" class="td-btn td-btn-cancel">Cancel</button>' +
@@ -129,25 +131,27 @@
 
         $('body').append(html);
 
-        // Bind events
         var $overlay = $('#td-modal-overlay');
         var $total = $('#td-total');
-        var $checkbox = $('#td-manual-assembly');
+        var $checkbox = $('#td-manual-check');
 
         function updateRows() {
             var count = Math.max(1, Math.min(200, parseInt($total.val(), 10) - 1)) || 1;
             $('#td-create-count').text(count);
-            if (!$checkbox.is(':checked')) return;
+            if (!hasManualFields || !$checkbox.is(':checked')) return;
 
-            var $tbody = $('#td-assembly-rows');
+            var $tbody = $('#td-manual-rows');
             var existing = $tbody.find('tr').length;
 
             if (count > existing) {
                 for (var i = existing + 1; i <= count; i++) {
-                    $tbody.append(
-                        '<tr><td class="td-row-num">' + i + '</td>' +
-                        '<td><input type="text" class="td-assembly-input" maxlength="40" placeholder="Assembly number..."></td></tr>'
-                    );
+                    var cells = '<td class="td-row-num">' + i + '</td>';
+                    for (var f = 0; f < TD.manualFields.length; f++) {
+                        cells += '<td><input type="text" class="td-field-input" '
+                               + 'data-field-id="' + TD.manualFields[f].id + '" '
+                               + 'maxlength="40" placeholder="..."></td>';
+                    }
+                    $tbody.append('<tr>' + cells + '</tr>');
                 }
             } else if (count < existing) {
                 $tbody.find('tr').slice(count).remove();
@@ -156,51 +160,61 @@
 
         $total.on('input change', updateRows);
 
-        $checkbox.on('change', function() {
-            if (this.checked) {
-                $('#td-assembly-section').slideDown(150);
-                updateRows();
-            } else {
-                $('#td-assembly-section').slideUp(150);
-            }
-        });
+        if (hasManualFields) {
+            $checkbox.on('change', function() {
+                if (this.checked) {
+                    $('#td-manual-section').slideDown(150);
+                    updateRows();
+                } else {
+                    $('#td-manual-section').slideUp(150);
+                }
+            });
+        }
 
         $overlay.find('.td-modal-close, .td-btn-cancel').on('click', function() {
             $overlay.remove();
         });
-
         $overlay.on('click', function(e) {
             if (e.target === this) $overlay.remove();
         });
 
         $('#td-btn-create').on('click', function() {
             var total = parseInt($total.val(), 10);
-            if (isNaN(total) || total < 2) {
-                $total.focus();
-                return;
-            }
+            if (isNaN(total) || total < 2) { $total.focus(); return; }
             var count = Math.min(200, total - 1);
-            var assemblyValues = null;
 
-            if ($checkbox.is(':checked')) {
-                assemblyValues = [];
-                $('#td-assembly-rows .td-assembly-input').each(function() {
-                    assemblyValues.push($.trim($(this).val()));
+            // Collect per-row field values if manual mode is on
+            var rowFieldValues = null;
+            if (hasManualFields && $checkbox.is(':checked')) {
+                rowFieldValues = [];
+                $('#td-manual-rows tr').each(function() {
+                    var obj = {};
+                    $(this).find('.td-field-input').each(function() {
+                        obj[$(this).data('field-id')] = $.trim($(this).val());
+                    });
+                    rowFieldValues.push(obj);
                 });
             }
 
             $overlay.remove();
-            TD.duplicateSequential(ticketId, count, assemblyValues);
+            TD.duplicateSequential(ticketId, count, rowFieldValues);
         });
 
-        // Focus the total input
         $total.focus().select();
         updateRows();
     };
 
+    TD.buildTableHeaders = function() {
+        var headers = '';
+        for (var i = 0; i < TD.manualFields.length; i++) {
+            headers += '<th>' + $('<span>').text(TD.manualFields[i].label).html() + '</th>';
+        }
+        return headers;
+    };
+
     // ── Sequential duplication ──
 
-    TD.duplicateSequential = function(ticketId, total, assemblyValues) {
+    TD.duplicateSequential = function(ticketId, total, rowFieldValues) {
         var $btn = $('#td-duplicate-btn');
         var originalHtml = $btn.html();
         var created = 0;
@@ -216,9 +230,8 @@
         function createNext() {
             var postData = { ticket_id: ticketId, count: 1, skip_source_note: 1 };
 
-            // If manual assembly values provided, include for this iteration
-            if (assemblyValues && assemblyValues[created]) {
-                postData.assembly_value = assemblyValues[created];
+            if (rowFieldValues && rowFieldValues[created]) {
+                postData.field_values = JSON.stringify(rowFieldValues[created]);
             }
 
             $.ajax({

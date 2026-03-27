@@ -79,13 +79,29 @@ class TicketDuplicatorAjax extends AjaxController {
         return array();
     }
 
-    private function getAssemblyFieldId($config) {
-        if ($config) {
-            $id = $config->get('assembly_field_id');
-            if ($id)
-                return (int) $id;
+    /**
+     * Get the list of manually-enterable field IDs + labels from config.
+     * Returns array of ['id' => int, 'label' => string].
+     */
+    private function getManualFields($config) {
+        if (!$config)
+            return array();
+
+        $raw = $config->get('manual_fields');
+        $ids = self::parseIdList($raw);
+        if (empty($ids))
+            return array();
+
+        // Look up labels for each field ID
+        $fields = array();
+        $sql = 'SELECT id, label FROM ' . FORM_FIELD_TABLE
+             . ' WHERE id IN (' . implode(',', array_map('intval', $ids)) . ')';
+        $res = db_query($sql);
+        if ($res) {
+            while ($row = db_fetch_array($res))
+                $fields[] = array('id' => (int) $row['id'], 'label' => $row['label']);
         }
-        return null; // disabled by default
+        return $fields;
     }
 
     private function isTicketAllowed($ticket, $config) {
@@ -125,9 +141,9 @@ class TicketDuplicatorAjax extends AjaxController {
         }
 
         Http::response(200, JsonDataEncoder::encode(array(
-            'allowed_depts'    => $allowedDepts,
-            'allowed_topics'   => $allowedTopics,
-            'assembly_field_id' => $this->getAssemblyFieldId($config),
+            'allowed_depts'  => $allowedDepts,
+            'allowed_topics' => $allowedTopics,
+            'manual_fields'  => $this->getManualFields($config),
         )));
     }
 
@@ -251,17 +267,16 @@ class TicketDuplicatorAjax extends AjaxController {
                 false
             );
 
-            // Override the 1C Assembly field if a value was provided
-            if (!empty($_POST['assembly_value'])) {
-                $assemblyFieldId = $this->getAssemblyFieldId($config);
-                if ($assemblyFieldId) {
-                    $assemblyValue = trim($_POST['assembly_value']);
+            // Override specific field values if provided (manual entry mode)
+            if (!empty($_POST['field_values'])) {
+                $fieldValues = json_decode($_POST['field_values'], true);
+                if (is_array($fieldValues) && !empty($fieldValues)) {
                     foreach (DynamicFormEntry::forTicket($newTicket->getId()) as $form) {
                         foreach ($form->getAnswers() as $answer) {
-                            if ($answer->getField()->get('id') == $assemblyFieldId) {
-                                $answer->setValue($assemblyValue);
+                            $fid = (string) $answer->getField()->get('id');
+                            if (isset($fieldValues[$fid]) && $fieldValues[$fid] !== '') {
+                                $answer->setValue(trim($fieldValues[$fid]));
                                 $answer->save();
-                                break 2;
                             }
                         }
                     }
