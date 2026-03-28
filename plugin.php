@@ -1,10 +1,11 @@
 <?php
 return array(
-    'id'          => 'ticket:duplicator',
+    'id'          => 'osticket:ticket-duplicator',
     'version'     => '1.0.0',
-    'name'        => /* trans */ 'Ticket Duplicator',
+    'name'        => 'Ticket Duplicator',
     'author'      => 'ChesnoTech',
-    'description' => /* trans */ 'Adds a Duplicate button to the ticket view. Bulk-create identical copies of any ticket with a single click.',
-    'url'         => 'https://github.com/ChesnoTech/osTicket-ticket-duplicator',
+    'description' => 'Adds a Duplicate button to the ticket view page. Creates a new ticket with the same metadata and first internal note for the same end-user.',
+    'url'         => 'https://chesnotech.com',
+    'ost_version' => '1.18',
     'plugin'      => 'class.TicketDuplicatorPlugin.php:TicketDuplicatorPlugin',
 );
