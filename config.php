@@ -44,7 +44,7 @@ class TicketFieldChoiceField extends ChoiceField {
         if (!isset($this->_choices)) {
             $this->_choices = array();
             $sql = 'SELECT f.id, f.label FROM ' . FORM_FIELD_TABLE . ' f '
-                 . 'JOIN ' . FORM_TABLE . ' fm ON fm.id = f.form_id '
+                 . 'JOIN ' . FORM_SEC_TABLE . ' fm ON fm.id = f.form_id '
                  . "WHERE fm.type = 'T' AND f.type = 'text' "
                  . "AND f.name NOT IN ('subject','message') "
                  . 'ORDER BY f.sort';
