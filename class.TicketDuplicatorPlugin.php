@@ -74,7 +74,19 @@ class TicketDuplicatorPlugin extends Plugin {
             '<script type="text/javascript" src="%s/js?v=%s"></script>',
             $base, $v);
 
-        $buffer = str_replace('</head>', $css . "\n</head>", $buffer);
+        $i18n = array(
+            'modal_title'    => /* trans */ 'Duplicate Ticket #%s',
+            'label_total'    => /* trans */ 'Total copies (incl. original):',
+            'label_manual'   => /* trans */ 'Enter field values manually',
+            'btn_cancel'     => /* trans */ 'Cancel',
+            'btn_create'     => /* trans */ 'Create %d duplicate(s)',
+            'err_failed'     => /* trans */ 'Failed to duplicate ticket.',
+            'err_partial'    => /* trans */ 'Successfully created %d of %d before the error.',
+            'notice_created' => /* trans */ '%d duplicate ticket(s) created! (#%s \u2014 #%s)',
+        );
+        $i18nScript = '<script>window.TDi18n=' . json_encode($i18n, JSON_UNESCAPED_UNICODE) . ';</script>';
+
+        $buffer = str_replace('</head>', $css . "\n" . $i18nScript . "\n</head>", $buffer);
         $buffer = str_replace('</body>', $js . "\n</body>", $buffer);
 
         return $buffer;

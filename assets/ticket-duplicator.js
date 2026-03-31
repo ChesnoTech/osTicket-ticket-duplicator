@@ -4,6 +4,23 @@
     var TD = {};
     TD.manualFields = []; // [{id:75, label:"1C Assembly"}, ...]
 
+    // i18n strings injected by PHP (window.TDi18n); fallback to English
+    var i18n = window.TDi18n || {
+        modal_title:    'Duplicate Ticket #%s',
+        label_total:    'Total copies (incl. original):',
+        label_manual:   'Enter field values manually',
+        btn_cancel:     'Cancel',
+        btn_create:     'Create %d duplicate(s)',
+        err_failed:     'Failed to duplicate ticket.',
+        err_partial:    'Successfully created %d of %d before the error.',
+        notice_created: '%d duplicate ticket(s) created! (#%s \u2014 #%s)',
+    };
+
+    function sprintf(str) {
+        var args = Array.prototype.slice.call(arguments, 1), i = 0;
+        return str.replace(/%[sd]/g, function() { return args[i++]; });
+    }
+
     TD.getTicketId = function() {
         var params = new URLSearchParams(window.location.search);
         var id = params.get('id');
@@ -67,7 +84,7 @@
             .addClass('action-button pull-right')
             .attr('data-placement', 'bottom')
             .attr('data-toggle', 'tooltip')
-            .attr('title', 'Duplicate Ticket')
+            .attr('title', sprintf(i18n.modal_title, ''))
             .css('cursor', 'pointer')
             .html('<i class="icon-copy"></i>')
             .on('click', function(e) {
@@ -98,19 +115,19 @@
             '<div id="td-modal-overlay" class="td-overlay">' +
             '<div class="td-modal' + (isWide ? ' td-modal-wide' : '') + '">' +
               '<div class="td-modal-header">' +
-                '<span>Duplicate Ticket #' + ticketNumber + '</span>' +
+                '<span>' + sprintf(i18n.modal_title, ticketNumber) + '</span>' +
                 '<a class="td-modal-close">&times;</a>' +
               '</div>' +
               '<div class="td-modal-body">' +
                 '<div class="td-field-row">' +
-                  '<label>Total copies (incl. original):</label>' +
+                  '<label>' + i18n.label_total + '</label>' +
                   '<input type="number" id="td-total" value="2" min="2" max="201" class="td-input-num">' +
                 '</div>' +
                 (hasManualFields ?
                 '<div class="td-field-row">' +
                   '<label class="td-checkbox-label">' +
                     '<input type="checkbox" id="td-manual-check"> ' +
-                    'Enter field values manually' +
+                    i18n.label_manual +
                   '</label>' +
                 '</div>' +
                 '<div id="td-manual-section" style="display:none;">' +
@@ -123,8 +140,8 @@
                 '</div>' : '') +
               '</div>' +
               '<div class="td-modal-footer">' +
-                '<button type="button" class="td-btn td-btn-cancel">Cancel</button>' +
-                '<button type="button" class="td-btn td-btn-create" id="td-btn-create">Create <span id="td-create-count">1</span> duplicate(s)</button>' +
+                '<button type="button" class="td-btn td-btn-cancel">' + i18n.btn_cancel + '</button>' +
+                '<button type="button" class="td-btn td-btn-create" id="td-btn-create">' + sprintf(i18n.btn_create, '<span id="td-create-count">1</span>') + '</button>' +
               '</div>' +
             '</div>' +
             '</div>';
@@ -260,7 +277,7 @@
                     }
                 },
                 error: function(xhr) {
-                    var msg = 'Failed to duplicate ticket.';
+                    var msg = i18n.err_failed;
                     try {
                         var r = JSON.parse(xhr.responseText);
                         if (r.error) msg = r.error;
@@ -287,8 +304,7 @@
                     var $notice = $('#msg_notice');
                     if ($notice.length) {
                         $notice.find('#msg-txt').text(
-                            created + ' duplicate ticket' + (created > 1 ? 's' : '') +
-                            ' created! (#' + firstNumber + ' — #' + lastNumber + ')');
+                            sprintf(i18n.notice_created, created, firstNumber, lastNumber));
                         $notice.show().delay(10000).fadeOut();
                     }
 
@@ -302,7 +318,7 @@
         function onError(msg) {
             restoreButton();
             if (created > 0) {
-                alert(msg + '\n\nSuccessfully created ' + created + ' of ' + total + ' before the error.');
+                alert(msg + '\n\n' + sprintf(i18n.err_partial, created, total));
             } else {
                 alert(msg);
             }

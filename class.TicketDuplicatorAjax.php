@@ -16,7 +16,7 @@ class TicketDuplicatorAjax extends AjaxController {
 
         if (!$thisstaff || !$thisstaff->getId()) {
             Http::response(403, JsonDataEncoder::encode(
-                array('error' => 'Staff login required')));
+                array('error' => /* trans */ 'Staff login required')));
             exit;
         }
     }
@@ -157,20 +157,20 @@ class TicketDuplicatorAjax extends AjaxController {
 
         if (!$ticketId) {
             Http::response(400, JsonDataEncoder::encode(
-                array('error' => 'Ticket ID is required')));
+                array('error' => /* trans */ 'Ticket ID is required')));
             return;
         }
 
         $ticket = Ticket::lookup($ticketId);
         if (!$ticket) {
             Http::response(404, JsonDataEncoder::encode(
-                array('error' => 'Ticket not found')));
+                array('error' => /* trans */ 'Ticket not found')));
             return;
         }
 
         if (!$ticket->checkStaffPerm($thisstaff)) {
             Http::response(403, JsonDataEncoder::encode(
-                array('error' => 'You do not have access to this ticket')));
+                array('error' => /* trans */ 'You do not have access to this ticket')));
             return;
         }
 
@@ -180,7 +180,7 @@ class TicketDuplicatorAjax extends AjaxController {
         // Check dept/topic access
         if (!$this->isTicketAllowed($ticket, $config)) {
             Http::response(403, JsonDataEncoder::encode(
-                array('error' => 'Duplication not allowed for this ticket (department/topic restriction)')));
+                array('error' => /* trans */ 'Duplication not allowed for this ticket (department/topic restriction)')));
             return;
         }
 
@@ -242,7 +242,7 @@ class TicketDuplicatorAjax extends AjaxController {
             $vars['message'] = (string) $body;
         } else {
             $vars['message'] = sprintf(
-                'Duplicated from ticket <b>#%s</b>.',
+                /* trans */ 'Duplicated from ticket <b>#%s</b>.',
                 $ticket->getNumber());
         }
 
@@ -254,14 +254,14 @@ class TicketDuplicatorAjax extends AjaxController {
             $newTicket = Ticket::create($vars, $errors, 'email', false, false);
 
             if (!$newTicket) {
-                $lastError = $errors['err'] ?: 'Failed to create duplicate ticket';
+                $lastError = $errors['err'] ?: /* trans */ 'Failed to create duplicate ticket';
                 break;
             }
 
             // Log internal note on the new ticket linking back to original
             $newTicket->logNote(
-                'Duplicated Ticket',
-                sprintf('This ticket was duplicated from <a href="tickets.php?id=%d"><b>#%s</b></a>.',
+                /* trans */ 'Duplicated Ticket',
+                sprintf(/* trans */ 'This ticket was duplicated from <a href="tickets.php?id=%d"><b>#%s</b></a>.',
                     $ticket->getId(), $ticket->getNumber()),
                 $thisstaff,
                 false
@@ -304,14 +304,14 @@ class TicketDuplicatorAjax extends AjaxController {
         if (!$skipSourceNote) {
             if (count($created) == 1) {
                 $noteBody = sprintf(
-                    'Ticket <a href="tickets.php?id=%d"><b>#%s</b></a> was created as a duplicate of this ticket.',
+                    /* trans */ 'Ticket <a href="tickets.php?id=%d"><b>#%s</b></a> was created as a duplicate of this ticket.',
                     $created[0]['id'], $firstNum);
             } else {
                 $noteBody = sprintf(
-                    '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
+                    /* trans */ '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
                     count($created), $firstNum, $lastNum);
             }
-            $ticket->logNote('Ticket Duplicated', $noteBody, $thisstaff, false);
+            $ticket->logNote(/* trans */ 'Ticket Duplicated', $noteBody, $thisstaff, false);
         }
 
         Http::response(200, JsonDataEncoder::encode(array(
@@ -335,22 +335,22 @@ class TicketDuplicatorAjax extends AjaxController {
         $ticket = Ticket::lookup($ticketId);
         if (!$ticket) {
             Http::response(404, JsonDataEncoder::encode(
-                array('error' => 'Ticket not found')));
+                array('error' => /* trans */ 'Ticket not found')));
             return;
         }
 
         if ($count == 1) {
             $noteBody = sprintf(
-                'Ticket <b>#%s</b> was created as a duplicate of this ticket.',
+                /* trans */ 'Ticket <b>#%s</b> was created as a duplicate of this ticket.',
                 Format::htmlchars($firstNum));
         } else {
             $noteBody = sprintf(
-                '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
+                /* trans */ '%d duplicate tickets were created from this ticket: <b>#%s</b> through <b>#%s</b>.',
                 $count,
                 Format::htmlchars($firstNum),
                 Format::htmlchars($lastNum));
         }
-        $ticket->logNote('Ticket Duplicated', $noteBody, $thisstaff, false);
+        $ticket->logNote(/* trans */ 'Ticket Duplicated', $noteBody, $thisstaff, false);
 
         Http::response(200, JsonDataEncoder::encode(array('success' => true)));
     }

@@ -96,7 +96,7 @@ class TicketDuplicatorConfig extends PluginConfig {
                 'required' => false,
                 'configuration' => array(
                     'multiselect' => true,
-                    'prompt' => 'None (disabled)',
+                    'prompt' => /* trans */ 'None (disabled)',
                 ),
             )),
 
@@ -110,7 +110,7 @@ class TicketDuplicatorConfig extends PluginConfig {
                 'required' => false,
                 'configuration' => array(
                     'multiselect' => true,
-                    'prompt' => 'All Departments',
+                    'prompt' => /* trans */ 'All Departments',
                 ),
             )),
             'allowed_topics' => new TopicChoiceField(array(
@@ -119,7 +119,7 @@ class TicketDuplicatorConfig extends PluginConfig {
                 'required' => false,
                 'configuration' => array(
                     'multiselect' => true,
-                    'prompt' => 'All Help Topics',
+                    'prompt' => /* trans */ 'All Help Topics',
                 ),
             )),
         );
