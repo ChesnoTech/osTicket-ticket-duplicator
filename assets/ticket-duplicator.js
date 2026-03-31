@@ -105,7 +105,7 @@
     TD.showModal = function(ticketId) {
         $('#td-modal-overlay').remove();
 
-        var ticketNumber = $('h2 a[href*="tickets.php"]').text().replace('#', '').trim()
+        var ticketNumber = ($('h2 a[href*="tickets.php"]').text().match(/\d+/) || [])[0]
             || $('title').text().replace(/.*#/, '').replace(/\s.*/, '').trim();
 
         var hasManualFields = TD.manualFields.length > 0;
