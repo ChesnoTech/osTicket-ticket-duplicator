@@ -355,6 +355,48 @@ class TicketDuplicatorAjax extends AjaxController {
         Http::response(200, JsonDataEncoder::encode(array('success' => true)));
     }
 
+    // ── Auto-update ──────────────────────────────────────────────────────────
+
+    function checkUpdate() {
+        global $thisstaff;
+        $this->requireStaff();
+
+        if (!$thisstaff->isAdmin()) {
+            Http::response(403, JsonDataEncoder::encode(
+                array('error' => /* trans */ 'Administrator access required')));
+            return;
+        }
+
+        require_once dirname(__FILE__) . '/class.TicketDuplicatorUpdater.php';
+        $result = TicketDuplicatorUpdater::checkUpdate();
+        Http::response(200, JsonDataEncoder::encode($result));
+    }
+
+    function installUpdate() {
+        global $thisstaff;
+        $this->requireStaff();
+
+        if (!$thisstaff->isAdmin()) {
+            Http::response(403, JsonDataEncoder::encode(
+                array('error' => /* trans */ 'Administrator access required')));
+            return;
+        }
+
+        require_once dirname(__FILE__) . '/class.TicketDuplicatorUpdater.php';
+        $result = TicketDuplicatorUpdater::downloadAndInstall();
+
+        if ($result['success']) {
+            $result['new_version'] = TicketDuplicatorUpdater::getLocalVersion();
+        }
+
+        Http::response($result['success'] ? 200 : 500, JsonDataEncoder::encode($result));
+    }
+
+    function serveUpdaterJs() {
+        $this->serveFile(dirname(__FILE__) . '/assets/td-updater.js',
+            'application/javascript; charset=UTF-8');
+    }
+
     private function serveFile($file, $contentType, $maxAge = 86400) {
         if (!file_exists($file))
             Http::response(404, 'Not found');

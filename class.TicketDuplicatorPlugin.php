@@ -47,7 +47,10 @@ class TicketDuplicatorPlugin extends Plugin {
                 url_post('^duplicate$', 'duplicate'),
                 url_post('^log-source-note$', 'logSourceNote'),
                 url_get('^assets/js$', 'serveJs'),
-                url_get('^assets/css$', 'serveCss')
+                url_get('^assets/css$', 'serveCss'),
+                url_get('^update/check$', 'checkUpdate'),
+                url_post('^update/install$', 'installUpdate'),
+                url_get('^assets/updater-js$', 'serveUpdaterJs')
             ))
         );
     }
@@ -88,6 +91,15 @@ class TicketDuplicatorPlugin extends Plugin {
 
         $buffer = str_replace('</head>', $css . "\n" . $i18nScript . "\n</head>", $buffer);
         $buffer = str_replace('</body>', $js . "\n</body>", $buffer);
+
+        // Inject auto-updater assets only on the plugins management page
+        $scriptName = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+        if (substr($scriptName, -11) === '/plugins.php') {
+            $updaterJs = sprintf(
+                '<script type="text/javascript" src="%s/updater-js?v=%s"></script>',
+                $base, $v);
+            $buffer = str_replace('</body>', $updaterJs . "\n</body>", $buffer);
+        }
 
         return $buffer;
     }
