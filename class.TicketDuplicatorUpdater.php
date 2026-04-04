@@ -18,17 +18,29 @@ class TicketDuplicatorUpdater {
     // ── Version helpers ──────────────────────────────────────────────────────
 
     static function getLocalVersion() {
-        $manifest = @include dirname(__FILE__) . '/plugin.php';
-        return (is_array($manifest) && isset($manifest['version']))
-            ? $manifest['version'] : '0.0.0';
+        // Read via file_get_contents + regex (not include) to avoid
+        // PHP opcode cache returning stale data after a live update.
+        $file = dirname(__FILE__) . '/plugin.php';
+        $content = @file_get_contents($file);
+        if ($content && preg_match("/'version'\s*=>\s*'([^']+)'/", $content, $m))
+            return $m[1];
+        return '0.0.0';
     }
 
     static function getRemoteVersion() {
-        $url = 'https://raw.githubusercontent.com/'
+        // Use GitHub API (no CDN caching) to get plugin.php contents
+        $url = 'https://api.github.com/repos/'
              . self::GITHUB_USER . '/' . self::GITHUB_REPO
-             . '/' . self::GITHUB_BRANCH . '/plugin.php';
-        $content = self::curlGet($url);
+             . '/contents/plugin.php?ref=' . self::GITHUB_BRANCH;
+        $json = self::curlGet($url);
+        if (!$json) return false;
+
+        $data = @json_decode($json, true);
+        if (!$data || empty($data['content'])) return false;
+
+        $content = @base64_decode($data['content']);
         if (!$content) return false;
+
         if (preg_match("/'version'\s*=>\s*'([^']+)'/", $content, $m))
             return $m[1];
         return false;
@@ -208,7 +220,12 @@ class TicketDuplicatorUpdater {
             } else {
                 $dir = dirname($outPath);
                 if (!is_dir($dir)) @mkdir($dir, 0755, true);
-                file_put_contents($outPath, $zip->getFromIndex($i));
+                if (file_put_contents($outPath, $zip->getFromIndex($i)) === false) {
+                    $zip->close();
+                    return array('success' => false,
+                        'error' => /* trans */ 'Cannot write file: ' . $relative
+                            . ' — check directory permissions (owner must be www-data)');
+                }
             }
         }
 

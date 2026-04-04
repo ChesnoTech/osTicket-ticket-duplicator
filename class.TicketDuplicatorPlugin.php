@@ -94,7 +94,7 @@ class TicketDuplicatorPlugin extends Plugin {
 
         // Inject auto-updater assets only on the plugins management page
         $scriptName = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
-        if (substr($scriptName, -11) === '/plugins.php') {
+        if (strpos($scriptName, 'plugins.php') !== false) {
             $updaterJs = sprintf(
                 '<script type="text/javascript" src="%s/updater-js?v=%s"></script>',
                 $base, $v);

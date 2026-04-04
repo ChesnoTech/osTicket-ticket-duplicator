@@ -10,8 +10,8 @@
     function createBanner() {
         if ($('#td-update-banner').length) return $('#td-update-banner');
         var $banner = $('<div id="td-update-banner">');
-        // Try to insert before the plugin list content
-        var $target = $('h1').first();
+        // Insert after the page heading (h2 "Installed Plugins")
+        var $target = $('form h2, h2, h1').filter(':visible').first();
         if ($target.length) {
             $banner.insertAfter($target);
         } else {
