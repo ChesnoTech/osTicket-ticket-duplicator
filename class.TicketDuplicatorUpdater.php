@@ -14,6 +14,7 @@ class TicketDuplicatorUpdater {
     const GITHUB_USER   = 'ChesnoTech';
     const GITHUB_REPO   = 'osTicket-ticket-duplicator';
     const GITHUB_BRANCH = 'master';
+    const CHECK_CACHE_TTL = 900; // 15 minutes
 
     // ── Version helpers ──────────────────────────────────────────────────────
 
@@ -48,27 +49,61 @@ class TicketDuplicatorUpdater {
 
     /**
      * Returns array:
-     *   available (bool), local (string), remote (string|false), error (string|null)
+     *   available (bool), local (string), remote (string|false), error (string|null), cached (bool)
+     *
+     * Results are cached for CHECK_CACHE_TTL seconds to avoid hitting
+     * the GitHub API on every admin page load.  Pass $force = true to
+     * bypass the cache (e.g. after an install attempt).
      */
-    static function checkUpdate() {
-        $local  = self::getLocalVersion();
+    static function checkUpdate($force = false) {
+        $local = self::getLocalVersion();
+
+        // ── Try cache first ──
+        if (!$force) {
+            $cached = self::readCache();
+            if ($cached !== false) {
+                // Recalculate against current local version (may have just updated)
+                $cached['local']     = $local;
+                $cached['available'] = ($cached['remote'] && version_compare($cached['remote'], $local, '>'));
+                $cached['cached']    = true;
+                return $cached;
+            }
+        }
+
+        // ── Fetch from GitHub ──
         $remote = self::getRemoteVersion();
 
         if ($remote === false) {
-            return array(
+            $result = array(
                 'available' => false,
                 'local'     => $local,
                 'remote'    => false,
                 'error'     => /* trans */ 'Could not reach GitHub to check for updates',
+                'cached'    => false,
             );
+            // Don't cache errors — let the next request retry
+            return $result;
         }
 
-        return array(
+        $result = array(
             'available' => version_compare($remote, $local, '>'),
             'local'     => $local,
             'remote'    => $remote,
             'error'     => null,
+            'cached'    => false,
         );
+
+        self::writeCache($result);
+        return $result;
+    }
+
+    /**
+     * Invalidate the update-check cache (call after a successful install).
+     */
+    static function clearCache() {
+        $file = self::getCacheFile();
+        if (file_exists($file))
+            @unlink($file);
     }
 
     // ── Backup ───────────────────────────────────────────────────────────────
@@ -172,11 +207,20 @@ class TicketDuplicatorUpdater {
         $result = self::extractAndOverwrite($tmpZip);
         @unlink($tmpZip);
 
-        if (!$result['success'])
+        if (!$result['success']) {
+            // ── Auto-rollback: restore files from backup ──
+            $rollback = self::rollbackFiles($fileBackup['path']);
+            $result['rollback'] = $rollback['success']
+                ? 'Files restored from backup'
+                : 'Rollback failed: ' . ($rollback['error'] ?? 'unknown');
             return array_merge($result, array(
                 'backup_files' => $fileBackup['path'],
                 'backup_db'    => isset($dbBackup['path']) ? $dbBackup['path'] : null,
             ));
+        }
+
+        // Clear cached update-check so the banner reflects the new version
+        self::clearCache();
 
         return array(
             'success'      => true,
@@ -265,6 +309,47 @@ class TicketDuplicatorUpdater {
 
         if ($err || $code !== 200) return false;
         return $data;
+    }
+
+    /**
+     * Restore plugin files from a backup directory.
+     * Copies everything from $backupDir back into the plugin directory.
+     */
+    private static function rollbackFiles($backupDir) {
+        if (!$backupDir || !is_dir($backupDir))
+            return array('success' => false, 'error' => 'Backup directory not found');
+
+        $pluginDir = dirname(__FILE__);
+        if (!self::copyDir($backupDir, $pluginDir))
+            return array('success' => false,
+                'error' => 'Could not copy backup files back to plugin directory');
+
+        return array('success' => true);
+    }
+
+    private static function getCacheFile() {
+        return sys_get_temp_dir() . '/td-update-cache-'
+             . md5(realpath(dirname(__FILE__))) . '.json';
+    }
+
+    private static function readCache() {
+        $file = self::getCacheFile();
+        if (!file_exists($file))
+            return false;
+
+        // Expired?
+        if (filemtime($file) + self::CHECK_CACHE_TTL < time()) {
+            @unlink($file);
+            return false;
+        }
+
+        $data = @json_decode(@file_get_contents($file), true);
+        return is_array($data) ? $data : false;
+    }
+
+    private static function writeCache($result) {
+        $file = self::getCacheFile();
+        @file_put_contents($file, json_encode($result), LOCK_EX);
     }
 
     private static function copyDir($src, $dst) {

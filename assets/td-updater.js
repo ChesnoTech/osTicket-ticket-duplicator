@@ -100,6 +100,7 @@
                     showBanner('error',
                         '<i class="icon-warning-sign"></i> ' +
                         '<strong>Update failed:</strong> ' + escHtml(data.error || 'Unknown error') +
+                        (data.rollback ? ' <br><strong>Rollback:</strong> ' + escHtml(data.rollback) : '') +
                         (data.backup_files ? ' (backup at <code>' + escHtml(data.backup_files) + '</code>)' : '') +
                         ' <a class="td-update-dismiss" href="#">Dismiss</a>');
                 }

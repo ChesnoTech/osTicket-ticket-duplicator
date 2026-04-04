@@ -4,6 +4,14 @@ All notable changes to the **Ticket Duplicator** plugin are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-04
+
+### Changed
+- **DRY bootstrap**: `bootstrap()` now delegates to `bootstrapStatic()` instead of duplicating the registration code.
+- **Cached update checks**: GitHub API results are cached for 15 minutes in a temp file, avoiding HTTP calls on every admin page load. Cache is cleared after a successful install.
+- **Auto-rollback on failure**: If file extraction fails mid-update, the plugin automatically restores files from the backup that was created before the install attempt.
+- **`pre_upgrade()` hook**: Integrates with osTicket's native plugin upgrade lifecycle — backs up DB config before osTicket applies version changes.
+
 ## [1.1.0] - 2026-04-04
 
 ### Added
@@ -35,5 +43,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Real-time progress counter for bulk operations.
 - PJAX and osTicketAwesome theme compatibility.
 
+[1.2.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/releases/tag/v1.0.0

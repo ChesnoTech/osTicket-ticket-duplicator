@@ -14,15 +14,7 @@ class TicketDuplicatorPlugin extends Plugin {
     static private $bootstrapped = false;
 
     function bootstrap() {
-        if (self::$bootstrapped)
-            return;
-        self::$bootstrapped = true;
-
-        if (!defined('STAFFINC_DIR'))
-            return;
-
-        Signal::connect('ajax.scp', array('TicketDuplicatorPlugin', 'registerAjaxRoutes'));
-        ob_start(array('TicketDuplicatorPlugin', 'injectAssets'));
+        self::bootstrapStatic();
     }
 
     static function bootstrapStatic() {
@@ -35,6 +27,22 @@ class TicketDuplicatorPlugin extends Plugin {
 
         Signal::connect('ajax.scp', array('TicketDuplicatorPlugin', 'registerAjaxRoutes'));
         ob_start(array('TicketDuplicatorPlugin', 'injectAssets'));
+    }
+
+    /**
+     * pre_upgrade — called by osTicket when the installed version differs
+     * from the manifest version. Return false to abort the upgrade.
+     */
+    function pre_upgrade(&$errors) {
+        // Back up DB config before osTicket applies the version bump
+        require_once dirname(__FILE__) . '/class.TicketDuplicatorUpdater.php';
+        $backup = TicketDuplicatorUpdater::backupDatabase();
+        if (!$backup['success']) {
+            $errors[] = 'Ticket Duplicator: DB backup failed — '
+                      . ($backup['error'] ?? 'unknown error');
+            return false;
+        }
+        return true;
     }
 
     static function registerAjaxRoutes($dispatcher) {
