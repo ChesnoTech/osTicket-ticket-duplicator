@@ -1,5 +1,19 @@
+# OS files
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# Editor swap / temp files
 *.swp
 *.swo
 *~
+*.bak
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Backups created by the auto-updater
+td-backups/
