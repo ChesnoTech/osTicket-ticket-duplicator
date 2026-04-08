@@ -1,0 +1,369 @@
+/* ── Ticket Duplicator — Update Panel ──────────────────────────────────── */
+
+#td-update-panel {
+    margin: 12px 0 16px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    background: #fff;
+    overflow: hidden;
+    font-size: 13px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+/* ── Header bar ───────────────────────────────────────────────────────── */
+
+.td-up-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #f6f8fa;
+    border-bottom: 1px solid #d0d7de;
+}
+.td-up-icon i {
+    font-size: 15px;
+    color: #1976d2;
+}
+.td-up-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #24292f;
+}
+.td-up-version {
+    margin-left: auto;
+    color: #57606a;
+    font-size: 12px;
+}
+.td-up-version strong {
+    color: #24292f;
+}
+.td-up-dismiss {
+    margin-left: 10px;
+    font-size: 18px;
+    line-height: 1;
+    color: #57606a;
+    text-decoration: none;
+    opacity: .6;
+    cursor: pointer;
+}
+.td-up-dismiss:hover { opacity: 1; color: #d9534f; }
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+
+.td-up-body {
+    padding: 14px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* ── Up-to-date / error states ────────────────────────────────────────── */
+
+.td-up-ok {
+    width: 100%;
+    padding: 10px 14px;
+    background: #dff0d8;
+    color: #2d6a2d;
+    border-radius: 4px;
+    font-weight: 500;
+}
+.td-up-ok i { margin-right: 6px; }
+
+.td-up-error-msg {
+    width: 100%;
+    padding: 10px 14px;
+    background: #f2dede;
+    color: #7a1e1e;
+    border-radius: 4px;
+}
+.td-up-error-msg i { margin-right: 6px; }
+
+/* ── Update cards ─────────────────────────────────────────────────────── */
+
+.td-up-card {
+    flex: 1 1 280px;
+    min-width: 280px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+}
+
+/* Minor card */
+.td-up-card-minor {
+    border-color: #5cb85c;
+}
+.td-up-card-minor .td-up-card-header {
+    background: #dff0d8;
+    color: #2d6a2d;
+}
+.td-up-card-minor .td-up-card-icon i {
+    color: #3c8a3c;
+}
+
+/* Major card */
+.td-up-card-major {
+    border-color: #e8973a;
+}
+.td-up-card-major .td-up-card-header {
+    background: #fff3cd;
+    color: #7a5e00;
+}
+.td-up-card-major .td-up-card-icon i {
+    color: #c27d0e;
+}
+
+.td-up-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 13px;
+}
+.td-up-card-icon i {
+    font-size: 14px;
+}
+
+.td-up-card-body {
+    padding: 12px;
+}
+
+/* ── Version jump ─────────────────────────────────────────────────────── */
+
+.td-up-version-jump {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #24292f;
+}
+.td-up-arrow {
+    color: #57606a;
+    margin: 0 2px;
+}
+
+/* ── Major warning ────────────────────────────────────────────────────── */
+
+.td-up-card-warning {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 4px;
+    color: #7a5e00;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.td-up-card-warning i {
+    color: #c27d0e;
+    margin-right: 4px;
+}
+
+/* ── Release notes ────────────────────────────────────────────────────── */
+
+.td-up-toggle-notes {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #1976d2;
+    cursor: pointer;
+    text-decoration: none;
+}
+.td-up-toggle-notes:hover {
+    text-decoration: underline;
+    color: #1565c0;
+}
+
+.td-up-notes {
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #24292f;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.td-up-notes code {
+    background: rgba(0,0,0,.06);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 11px;
+}
+.td-up-bullet {
+    display: block;
+    padding-left: 8px;
+}
+
+/* ── Install buttons ──────────────────────────────────────────────────── */
+
+.td-up-install-btn {
+    display: inline-block;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    transition: background .15s;
+}
+.td-up-btn-minor {
+    background: #2e8b3e;
+}
+.td-up-btn-minor:hover { background: #267332; }
+
+.td-up-btn-major {
+    background: #d97a0e;
+}
+.td-up-btn-major:hover { background: #b8670b; }
+
+.td-up-install-btn:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+/* ── Loading / result states ──────────────────────────────────────────── */
+
+.td-up-loading {
+    width: 100%;
+    padding: 16px;
+    text-align: center;
+    color: #1a5972;
+    font-size: 14px;
+}
+.td-up-loading i {
+    margin-right: 8px;
+}
+
+.td-up-result-ok {
+    width: 100%;
+    padding: 12px 14px;
+    background: #dff0d8;
+    color: #2d6a2d;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+.td-up-result-ok i { margin-right: 6px; }
+.td-up-result-ok code {
+    font-size: 11px;
+    background: rgba(0,0,0,.06);
+    padding: 1px 4px;
+    border-radius: 2px;
+    word-break: break-all;
+}
+
+.td-up-result-error {
+    width: 100%;
+    padding: 12px 14px;
+    background: #f2dede;
+    color: #7a1e1e;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+.td-up-result-error i { margin-right: 6px; }
+.td-up-result-error code {
+    font-size: 11px;
+    background: rgba(0,0,0,.06);
+    padding: 1px 4px;
+    border-radius: 2px;
+    word-break: break-all;
+}
+
+/* ── Dark mode support ────────────────────────────────────────────────── */
+
+.dark-mode #td-update-panel {
+    background: #21262d;
+    border-color: #30363d;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.dark-mode .td-up-header {
+    background: #161b22;
+    border-color: #30363d;
+}
+.dark-mode .td-up-title,
+.dark-mode .td-up-version strong {
+    color: #c9d1d9;
+}
+.dark-mode .td-up-version {
+    color: #8b949e;
+}
+
+.dark-mode .td-up-card {
+    background: #0d1117;
+    border-color: #30363d;
+}
+.dark-mode .td-up-card-minor {
+    border-color: #238636;
+}
+.dark-mode .td-up-card-minor .td-up-card-header {
+    background: #0d2818;
+    color: #56d364;
+}
+.dark-mode .td-up-card-major {
+    border-color: #9e6a03;
+}
+.dark-mode .td-up-card-major .td-up-card-header {
+    background: #2d1f00;
+    color: #e3b341;
+}
+
+.dark-mode .td-up-version-jump,
+.dark-mode .td-up-notes {
+    color: #c9d1d9;
+}
+.dark-mode .td-up-notes {
+    background: #161b22;
+    border-color: #30363d;
+}
+.dark-mode .td-up-card-warning {
+    background: #2d1f00;
+    border-color: #6e4b00;
+    color: #e3b341;
+}
+
+.dark-mode .td-up-ok {
+    background: #0d2818;
+    color: #56d364;
+}
+.dark-mode .td-up-error-msg {
+    background: #3c1111;
+    color: #f85149;
+}
+.dark-mode .td-up-result-ok {
+    background: #0d2818;
+    color: #56d364;
+}
+.dark-mode .td-up-result-error {
+    background: #3c1111;
+    color: #f85149;
+}
+.dark-mode .td-up-loading {
+    color: #79c0ff;
+}
+.dark-mode .td-up-toggle-notes {
+    color: #58a6ff;
+}
+.dark-mode .td-up-dismiss {
+    color: #8b949e;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+    .td-up-body {
+        flex-direction: column;
+    }
+    .td-up-card {
+        min-width: 0;
+    }
+    .td-up-header {
+        flex-wrap: wrap;
+    }
+    .td-up-version {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 4px;
+    }
+}

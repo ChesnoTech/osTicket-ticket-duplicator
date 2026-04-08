@@ -4,6 +4,20 @@ All notable changes to the **Ticket Duplicator** plugin are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-08
+
+### Added
+- **Minor / Major update selection**: admins can now see available updates categorized as "Minor / Patch" or "Major", each with its own install button and visual styling.
+- **Release notes viewer**: expandable release notes for each available update, pulled from GitHub Releases.
+- **Tag-specific downloads**: updates install a specific tagged version from GitHub instead of the master branch, ensuring reproducible installs.
+
+### Changed
+- **GitHub Releases API**: update checking now uses the Releases API (`/repos/.../releases`) instead of reading `plugin.php` from the repo contents. Returns all available versions in one call.
+- **Semver parsing**: versions are parsed into major.minor.patch components to categorize updates correctly.
+- **ZIP prefix auto-detection**: `extractAndOverwrite()` dynamically detects the root folder inside GitHub archive ZIPs instead of hardcoding `repo-branch/`.
+- **Redesigned update panel**: replaced the single-line banner with a card-based panel showing separate minor and major update cards, version jumps, warning for major updates, and collapsible release notes.
+- **Dedicated updater CSS**: update panel styles moved from `ticket-duplicator.css` to `td-updater.css`, loaded only on the plugins page.
+
 ## [1.2.0] - 2026-04-04
 
 ### Changed
@@ -43,6 +57,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Real-time progress counter for bulk operations.
 - PJAX and osTicketAwesome theme compatibility.
 
+[1.3.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/releases/tag/v1.0.0

@@ -58,7 +58,8 @@ class TicketDuplicatorPlugin extends Plugin {
                 url_get('^assets/css$', 'serveCss'),
                 url_get('^update/check$', 'checkUpdate'),
                 url_post('^update/install$', 'installUpdate'),
-                url_get('^assets/updater-js$', 'serveUpdaterJs')
+                url_get('^assets/updater-js$', 'serveUpdaterJs'),
+                url_get('^assets/updater-css$', 'serveUpdaterCss')
             ))
         );
     }
@@ -103,9 +104,13 @@ class TicketDuplicatorPlugin extends Plugin {
         // Inject auto-updater assets only on the plugins management page
         $scriptName = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
         if (strpos($scriptName, 'plugins.php') !== false) {
+            $updaterCss = sprintf(
+                '<link rel="stylesheet" type="text/css" href="%s/updater-css?v=%s">',
+                $base, $v);
             $updaterJs = sprintf(
                 '<script type="text/javascript" src="%s/updater-js?v=%s"></script>',
                 $base, $v);
+            $buffer = str_replace('</head>', $updaterCss . "\n</head>", $buffer);
             $buffer = str_replace('</body>', $updaterJs . "\n</body>", $buffer);
         }
 

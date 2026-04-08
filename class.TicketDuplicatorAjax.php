@@ -382,8 +382,18 @@ class TicketDuplicatorAjax extends AjaxController {
             return;
         }
 
+        // Accept a specific tag to install (e.g. "v1.3.0" or "v2.0.0")
+        $tag = isset($_POST['tag']) ? trim($_POST['tag']) : '';
+
+        // Validate tag format to prevent injection
+        if ($tag && !preg_match('/^v?\d+\.\d+\.\d+$/', $tag)) {
+            Http::response(400, JsonDataEncoder::encode(
+                array('error' => /* trans */ 'Invalid version tag format')));
+            return;
+        }
+
         require_once dirname(__FILE__) . '/class.TicketDuplicatorUpdater.php';
-        $result = TicketDuplicatorUpdater::downloadAndInstall();
+        $result = TicketDuplicatorUpdater::downloadAndInstall($tag);
 
         if ($result['success']) {
             $result['new_version'] = TicketDuplicatorUpdater::getLocalVersion();
@@ -395,6 +405,11 @@ class TicketDuplicatorAjax extends AjaxController {
     function serveUpdaterJs() {
         $this->serveFile(dirname(__FILE__) . '/assets/td-updater.js',
             'application/javascript; charset=UTF-8');
+    }
+
+    function serveUpdaterCss() {
+        $this->serveFile(dirname(__FILE__) . '/assets/td-updater.css',
+            'text/css; charset=UTF-8');
     }
 
     private function serveFile($file, $contentType, $maxAge = 86400) {

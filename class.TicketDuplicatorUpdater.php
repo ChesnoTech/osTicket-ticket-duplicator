@@ -2,11 +2,11 @@
 /**
  * Ticket Duplicator Plugin - Auto-Updater
  *
- * Handles version checking against GitHub, file/DB backup, and
- * downloading + installing the latest release.
+ * Handles version checking against GitHub Releases API, file/DB backup,
+ * and downloading + installing specific minor or major releases.
  *
  * @author  ChesnoTech
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 class TicketDuplicatorUpdater {
@@ -19,8 +19,6 @@ class TicketDuplicatorUpdater {
     // ── Version helpers ──────────────────────────────────────────────────────
 
     static function getLocalVersion() {
-        // Read via file_get_contents + regex (not include) to avoid
-        // PHP opcode cache returning stale data after a live update.
         $file = dirname(__FILE__) . '/plugin.php';
         $content = @file_get_contents($file);
         if ($content && preg_match("/'version'\s*=>\s*'([^']+)'/", $content, $m))
@@ -28,72 +26,153 @@ class TicketDuplicatorUpdater {
         return '0.0.0';
     }
 
-    static function getRemoteVersion() {
-        // Use GitHub API (no CDN caching) to get plugin.php contents
+    /**
+     * Parse a version string into [major, minor, patch].
+     */
+    private static function parseSemver($version) {
+        $clean = ltrim($version, 'vV');
+        $parts = explode('.', $clean);
+        return array(
+            (int)($parts[0] ?? 0),
+            (int)($parts[1] ?? 0),
+            (int)($parts[2] ?? 0),
+        );
+    }
+
+    /**
+     * Fetch all releases from the GitHub Releases API.
+     * Returns array of {tag, version, name, body, prerelease} or false on failure.
+     */
+    private static function fetchReleases() {
         $url = 'https://api.github.com/repos/'
              . self::GITHUB_USER . '/' . self::GITHUB_REPO
-             . '/contents/plugin.php?ref=' . self::GITHUB_BRANCH;
+             . '/releases?per_page=50';
         $json = self::curlGet($url);
         if (!$json) return false;
 
         $data = @json_decode($json, true);
-        if (!$data || empty($data['content'])) return false;
+        if (!is_array($data)) return false;
 
-        $content = @base64_decode($data['content']);
-        if (!$content) return false;
+        $releases = array();
+        foreach ($data as $r) {
+            if (!empty($r['draft'])) continue;
+            $tag = isset($r['tag_name']) ? $r['tag_name'] : '';
+            $ver = ltrim($tag, 'vV');
+            if (!preg_match('/^\d+\.\d+\.\d+/', $ver)) continue;
 
-        if (preg_match("/'version'\s*=>\s*'([^']+)'/", $content, $m))
-            return $m[1];
-        return false;
+            $releases[] = array(
+                'tag'        => $tag,
+                'version'    => $ver,
+                'name'       => isset($r['name']) ? $r['name'] : $tag,
+                'body'       => isset($r['body']) ? $r['body'] : '',
+                'prerelease' => !empty($r['prerelease']),
+            );
+        }
+
+        // Sort descending by version
+        usort($releases, function ($a, $b) {
+            return version_compare($b['version'], $a['version']);
+        });
+
+        return $releases;
     }
 
     /**
-     * Returns array:
-     *   available (bool), local (string), remote (string|false), error (string|null), cached (bool)
+     * Check for available updates, categorized as minor and major.
      *
-     * Results are cached for CHECK_CACHE_TTL seconds to avoid hitting
-     * the GitHub API on every admin page load.  Pass $force = true to
-     * bypass the cache (e.g. after an install attempt).
+     * Returns array:
+     *   local    (string)  — current installed version
+     *   minor    (array|null) — latest minor/patch update (same major version)
+     *   major    (array|null) — latest major update (higher major version)
+     *   error    (string|null)
+     *   cached   (bool)
+     *
+     * Each update entry: {version, tag, name, body, type}
      */
     static function checkUpdate($force = false) {
         $local = self::getLocalVersion();
+        list($localMajor, , ) = self::parseSemver($local);
 
         // ── Try cache first ──
         if (!$force) {
             $cached = self::readCache();
             if ($cached !== false) {
                 // Recalculate against current local version (may have just updated)
-                $cached['local']     = $local;
-                $cached['available'] = ($cached['remote'] && version_compare($cached['remote'], $local, '>'));
-                $cached['cached']    = true;
+                $cached['local'] = $local;
+                $cached = self::recalcAvailability($cached, $local);
+                $cached['cached'] = true;
                 return $cached;
             }
         }
 
-        // ── Fetch from GitHub ──
-        $remote = self::getRemoteVersion();
+        // ── Fetch releases from GitHub ──
+        $releases = self::fetchReleases();
 
-        if ($remote === false) {
-            $result = array(
-                'available' => false,
-                'local'     => $local,
-                'remote'    => false,
-                'error'     => /* trans */ 'Could not reach GitHub to check for updates',
-                'cached'    => false,
+        if ($releases === false) {
+            return array(
+                'local'  => $local,
+                'minor'  => null,
+                'major'  => null,
+                'error'  => /* trans */ 'Could not reach GitHub to check for updates',
+                'cached' => false,
             );
-            // Don't cache errors — let the next request retry
-            return $result;
+        }
+
+        // ── Find latest minor and latest major ──
+        $latestMinor = null;
+        $latestMajor = null;
+
+        foreach ($releases as $rel) {
+            if ($rel['prerelease']) continue;
+            if (!version_compare($rel['version'], $local, '>')) continue;
+
+            list($relMajor, , ) = self::parseSemver($rel['version']);
+
+            if ($relMajor === $localMajor && $latestMinor === null) {
+                $latestMinor = array(
+                    'version' => $rel['version'],
+                    'tag'     => $rel['tag'],
+                    'name'    => $rel['name'],
+                    'body'    => $rel['body'],
+                    'type'    => 'minor',
+                );
+            }
+
+            if ($relMajor > $localMajor && $latestMajor === null) {
+                $latestMajor = array(
+                    'version' => $rel['version'],
+                    'tag'     => $rel['tag'],
+                    'name'    => $rel['name'],
+                    'body'    => $rel['body'],
+                    'type'    => 'major',
+                );
+            }
+
+            // Found both — stop searching
+            if ($latestMinor !== null && $latestMajor !== null) break;
         }
 
         $result = array(
-            'available' => version_compare($remote, $local, '>'),
-            'local'     => $local,
-            'remote'    => $remote,
-            'error'     => null,
-            'cached'    => false,
+            'local'  => $local,
+            'minor'  => $latestMinor,
+            'major'  => $latestMajor,
+            'error'  => null,
+            'cached' => false,
         );
 
         self::writeCache($result);
+        return $result;
+    }
+
+    /**
+     * Recalculate minor/major availability against the current local version.
+     * Used when reading from cache (local version may have changed since cache was written).
+     */
+    private static function recalcAvailability($result, $local) {
+        if ($result['minor'] && !version_compare($result['minor']['version'], $local, '>'))
+            $result['minor'] = null;
+        if ($result['major'] && !version_compare($result['major']['version'], $local, '>'))
+            $result['major'] = null;
         return $result;
     }
 
@@ -138,7 +217,6 @@ class TicketDuplicatorUpdater {
             '',
         );
 
-        // Capture all plugin config (all instances across all plugins — small table)
         $res = db_query("SELECT * FROM " . TABLE_PREFIX . "config WHERE namespace LIKE 'plugin.%'");
         if ($res) {
             while ($row = db_fetch_array($res)) {
@@ -160,10 +238,12 @@ class TicketDuplicatorUpdater {
     // ── Install ──────────────────────────────────────────────────────────────
 
     /**
-     * Backup then download + install the latest version from GitHub.
-     * Returns array: success (bool), backup_files (string), backup_db (string), error (string)
+     * Backup then download + install a specific tagged version from GitHub.
+     *
+     * @param string $tag  Git tag to install (e.g. "v1.3.0"). If empty, downloads master.
+     * @return array  success (bool), backup_files, backup_db, error, rollback
      */
-    static function downloadAndInstall() {
+    static function downloadAndInstall($tag = '') {
         // 1. Backup files (required — abort if it fails)
         $fileBackup = self::backupFiles();
         if (!$fileBackup['success'])
@@ -183,9 +263,15 @@ class TicketDuplicatorUpdater {
                 'backup_files' => $fileBackup['path'],
             );
 
-        // 4. Download ZIP from GitHub
-        $zipUrl  = 'https://github.com/' . self::GITHUB_USER . '/' . self::GITHUB_REPO
-                 . '/archive/refs/heads/' . self::GITHUB_BRANCH . '.zip';
+        // 4. Build download URL — tag-specific or master fallback
+        if ($tag) {
+            $zipUrl = 'https://github.com/' . self::GITHUB_USER . '/' . self::GITHUB_REPO
+                    . '/archive/refs/tags/' . $tag . '.zip';
+        } else {
+            $zipUrl = 'https://github.com/' . self::GITHUB_USER . '/' . self::GITHUB_REPO
+                    . '/archive/refs/heads/' . self::GITHUB_BRANCH . '.zip';
+        }
+
         $zipData = self::curlGet($zipUrl);
         if (!$zipData)
             return array(
@@ -219,7 +305,7 @@ class TicketDuplicatorUpdater {
             ));
         }
 
-        // Clear cached update-check so the banner reflects the new version
+        // Clear cached update-check so the panel reflects the new version
         self::clearCache();
 
         return array(
@@ -231,20 +317,40 @@ class TicketDuplicatorUpdater {
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
+    /**
+     * Extract a GitHub archive ZIP into the plugin directory.
+     * Auto-detects the root folder prefix inside the ZIP.
+     */
     private static function extractAndOverwrite($zipPath) {
         $zip = new ZipArchive();
         if ($zip->open($zipPath) !== true)
             return array('success' => false, 'error' => /* trans */ 'Cannot open downloaded ZIP file');
 
-        $pluginDir  = realpath(dirname(__FILE__));
-        // GitHub names the top-level folder: repo-branch/
-        $prefix     = self::GITHUB_REPO . '-' . self::GITHUB_BRANCH . '/';
-        $prefixLen  = strlen($prefix);
+        $pluginDir = realpath(dirname(__FILE__));
+
+        // Auto-detect the root prefix from the first entry (GitHub uses repo-tag/ or repo-branch/)
+        $prefix = '';
+        if ($zip->numFiles > 0) {
+            $first = $zip->getNameIndex(0);
+            if (substr($first, -1) === '/') {
+                $prefix = $first;
+            } else {
+                $slashPos = strpos($first, '/');
+                if ($slashPos !== false)
+                    $prefix = substr($first, 0, $slashPos + 1);
+            }
+        }
+        $prefixLen = strlen($prefix);
+
+        if (!$prefix) {
+            $zip->close();
+            return array('success' => false, 'error' => /* trans */ 'Unexpected ZIP structure — no root folder found');
+        }
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
 
-            // Skip the root folder entry itself
+            // Skip the root folder entry itself and entries outside the prefix
             if ($name === $prefix || substr($name, 0, $prefixLen) !== $prefix)
                 continue;
 
@@ -259,7 +365,6 @@ class TicketDuplicatorUpdater {
                 continue;
 
             if (substr($name, -1) === '/') {
-                // Directory entry
                 if (!is_dir($outPath)) @mkdir($outPath, 0755, true);
             } else {
                 $dir = dirname($outPath);
@@ -281,7 +386,6 @@ class TicketDuplicatorUpdater {
         $dir = INCLUDE_DIR . 'plugins/td-backups';
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);
-            // Prevent direct web access to backup files
             @file_put_contents($dir . '/.htaccess', "Deny from all\n");
         }
         return $dir;
@@ -299,7 +403,7 @@ class TicketDuplicatorUpdater {
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_USERAGENT      => 'osTicket-TicketDuplicator-Updater/1.0',
+            CURLOPT_USERAGENT      => 'osTicket-TicketDuplicator-Updater/2.0',
         ));
 
         $data = curl_exec($ch);
@@ -313,7 +417,6 @@ class TicketDuplicatorUpdater {
 
     /**
      * Restore plugin files from a backup directory.
-     * Copies everything from $backupDir back into the plugin directory.
      */
     private static function rollbackFiles($backupDir) {
         if (!$backupDir || !is_dir($backupDir))
@@ -337,7 +440,6 @@ class TicketDuplicatorUpdater {
         if (!file_exists($file))
             return false;
 
-        // Expired?
         if (filemtime($file) + self::CHECK_CACHE_TTL < time()) {
             @unlink($file);
             return false;
