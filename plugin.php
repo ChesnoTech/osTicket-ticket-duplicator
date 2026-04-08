@@ -1,7 +1,7 @@
 <?php
 return array(
-    'id'          => 'osticket:ticket-duplicator',
-    'version'     => '1.3.0',
+    'id'          => 'chesnotech:ticket-duplicator',
+    'version'     => '1.3.1',
     'name'        => /* trans */ 'Ticket Duplicator',
     'author'      => 'ChesnoTech',
     'description' => /* trans */ 'Adds a Duplicate button to the ticket view page. Creates a new ticket with the same metadata and first internal note for the same end-user.',

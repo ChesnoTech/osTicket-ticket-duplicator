@@ -4,6 +4,11 @@ All notable changes to the **Ticket Duplicator** plugin are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-08
+
+### Fixed
+- **Plugin ID namespace**: changed from `osticket:ticket-duplicator` to `chesnotech:ticket-duplicator` — the `osticket:` prefix is reserved for official plugins.
+
 ## [1.3.0] - 2026-04-08
 
 ### Added
@@ -57,6 +62,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Real-time progress counter for bulk operations.
 - PJAX and osTicketAwesome theme compatibility.
 
+[1.3.1]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ChesnoTech/osTicket-ticket-duplicator/compare/v1.0.0...v1.1.0
